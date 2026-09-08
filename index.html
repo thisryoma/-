@@ -8,7 +8,7 @@
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='100' fill='%232C3E50'/><rect x='60' y='60' width='392' height='392' rx='40' fill='%231A252F' stroke='%23F39C12' stroke-width='16'/><path d='M100 380 L220 220 L300 300 L350 240 L412 380 Z' fill='%2327AE60'/><circle cx='180' cy='160' r='35' fill='%23F1C40F'/></svg>">
   <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='100' fill='%232C3E50'/><rect x='60' y='60' width='392' height='392' rx='40' fill='%231A252F' stroke='%23F39C12' stroke-width='16'/><path d='M100 380 L220 220 L300 300 L350 240 L412 380 Z' fill='%2327AE60'/><circle cx='180' cy='160' r='35' fill='%23F1C40F'/></svg>">
 
-  <link rel="manifest" href='data:application/manifest+json;utf8,{"name":"デジタルフォトフレーム","short_name":"フォトフレーム","start_url":"./index.html","display":"standalone","background_color":"#000000","theme_color":"#000000","icons":[{"src":"data:image/svg+xml;utf8,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 512 512%27><rect width=%27512%27 height=%27512%27 rx=%27100%27 fill=%27%232C3E50%27/><rect x=%2760%27 y=%2760%27 width=%27392%27 height=%27392%27 rx=%2740%27 fill=%27%231A252F%27 stroke=%27%23F39C12%27 stroke-width=%2716%27/><path d=%27M100 380 L220 220 L300 300 L350 240 L412 380 Z%27 fill=%27%2327AE60%27/><circle cx=%27180%27 cy=%27160%27 r=%2735%27 fill=%27%23F1C40F%27/></svg>","sizes":"512x512","type":"image/svg+xml","purpose":"any maskable"}]}'>
+  <link rel="manifest" href='data:application/manifest+json;utf8,{"name":"デジタルフォトフレーム","short_name":"フォトフレーム","start_url":"./index.html","display":"standalone","background_color":"#000000","theme_color":"#000000","icons":[{"src":"data:image/svg+xml;charset=utf-8,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 512 512\"><rect width=\"512\" height=\"512\" rx=\"100\" fill=\"%232C3E50\"/><rect x=\"60\" y=\"60\" width=\"392\" height=\"392\" rx=\"40\" fill=\"%231A252F\" stroke=\"%23F39C12\" stroke-width=\"16\"/><path d=\"M100 380 L220 220 L300 300 L350 240 L412 380 Z\" fill=\"%2327AE60\"/><circle cx=\"180\" cy=\"160\" r=\"35\" fill=\"%23F1C40F\"/></svg>","sizes":"192x192 512x512","type":"image/svg+xml","purpose":"any"}]}'>
 
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
@@ -34,6 +34,934 @@
     .filter-item input[type="date"] { background: #333; color: #fff; border: 1px solid #555; padding: 6px; border-radius: 6px; font-size: 0.85rem; flex: 1; }
 
     /* スライドショー画面 */
+    #slideshow-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none; background: #000; z-index: 10; overflow: hidden; cursor: pointer; }
+    .photo-wrapper { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 1.5s ease-in-out; }
+    .photo-wrapper.active { opacity: 1; z-index: 2; }
+    .photo-wrapper.inactive { opacity: 0; z-index: 1; }
+    .photo { max-width: 100%; max-height: 100%; object-fit: contain; }
+
+    #date-overlay { position: absolute; bottom: 20px; left: 20px; background: rgba(0,0,0,0.6); color: #fff; padding: 8px 16px; border-radius: 8px; font-size: 1.1rem; z-index: 20; border: 1px solid rgba(255,255,255,0.1); pointer-events: none; }
+    #blackout-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 50; display: none; cursor: pointer; }
+    #controls { position: absolute; top: 15px; right: 15px; z-index: 30; display: flex; gap: 8px; }
+    .ctrl-btn { background: rgba(0,0,0,0.6); color: #fff; border: 1px solid #555; padding: 10px 16px; border-radius: 20px; cursor: pointer; }
+    input[type="file"] { display: none; }
+
+    /* 写真管理モーダル */
+    #modal-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 200; padding: 20px; }
+    .modal-card { background: #1e1e1e; border-radius: 16px; width: 100%; max-width: 750px; height: 85vh; display: flex; flex-direction: column; border: 1px solid #333; overflow: hidden; }
+    .modal-header { padding: 16px 20px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
+    
+    /* モーダル内ツールバー（表示切替・並べ替え） */
+    .modal-toolbar { padding: 10px 20px; border-bottom: 1px solid #333; background: #252525; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; font-size: 0.85rem; }
+    .modal-toolbar select, .modal-toolbar button { background: #333; color: #fff; border: 1px solid #555; padding: 5px 10px; border-radius: 6px; cursor: pointer; }
+    .view-btn-group { display: flex; gap: 4px; }
+    .view-btn { background: #333; color: #aaa; border: 1px solid #555; padding: 5px 10px; border-radius: 6px; cursor: pointer; }
+    .view-btn.active { background: #007bff; color: #fff; border-color: #007bff; font-weight: bold; }
+
+    /* モーダル本文（グリッド/リスト切り替え対応） */
+    .modal-body { padding: 20px; overflow-y: auto; flex: 1; }
+    
+    /* サムネイル（グリッド）表示用 */
+    .modal-body.grid-view { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px; }
+    .thumb-item { background: #2a2a2a; border-radius: 8px; overflow: hidden; position: relative; border: 1px solid #444; display: flex; flex-direction: column; align-items: center; height: 140px; flex-shrink: 0; }
+    .thumb-item img, .thumb-item video { width: 100%; height: 90px; object-fit: cover; flex-shrink: 0; display: block; background: #111; }
+    .thumb-name { font-size: 0.7rem; padding: 2px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; text-align: center; color: #ccc; height: 22px; flex-shrink: 0; }
+    .thumb-del { background: #dc3545; color: #fff; border: none; border-radius: 4px; padding: 2px 8px; font-size: 0.7rem; cursor: pointer; margin-top: 2px; }
+
+    /* リスト表示用 */
+    .modal-body.list-view { display: flex; flex-direction: column; gap: 8px; }
+    .list-item { background: #2a2a2a; border-radius: 8px; border: 1px solid #444; display: flex; align-items: center; padding: 8px 12px; gap: 12px; }
+    .list-item img, .list-item video { width: 50px; height: 50px; object-fit: cover; border-radius: 4px; background: #111; flex-shrink: 0; }
+    .list-info { flex: 1; min-width: 0; }
+    .list-title { font-size: 0.9rem; font-weight: bold; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .list-sub { font-size: 0.75rem; color: #aaa; margin-top: 2px; }
+
+    .modal-footer { padding: 12px 20px; border-top: 1px solid #333; display: flex; justify-content: space-between; align-items: center; background: #1e1e1e; }
+  </style>
+</head>
+<body>
+
+  <div id="setup-screen">
+    <div class="card">
+      <h1>🖼️ デジタルフォトフレーム</h1>
+      
+      <button class="btn btn-folder" onclick="document.getElementById('folder-input').click()">
+        📁 フォルダごと選択して一括追加
+      </button>
+      <input type="file" id="folder-input" webkitdirectory directory multiple onchange="handleFolderSelect(event)">
+
+      <button class="btn" style="background: #007bff;" onclick="document.getElementById('file-input').click()">
+        🖼️ 写真・動画ファイルを個別に選択・追加
+      </button>
+      <input type="file" id="file-input" multiple accept="image/*,video/*" onchange="handleFileSelect(event)">
+
+      <div style="text-align: center; margin: 15px 0;">
+        <div style="font-size: 1.1rem; font-weight: bold; color: #4da6ff;">
+          現在の登録枚数: <span id="photo-count">0</span> 件
+        </div>
+        <div id="bg-status" style="font-size: 0.85rem; color: #aaa; margin-top: 4px; min-height: 1.2em;"></div>
+      </div>
+
+      <button class="btn btn-secondary" style="background: #17a2b8;" onclick="openPhotoManager()">
+        👁️ 登録ファイルの一覧・個別削除
+      </button>
+
+      <button class="btn btn-danger" style="margin-top: 10px;" onclick="clearPhotosDB()">
+        🗑️ 登録ファイルをすべてリセット
+      </button>
+
+      <div style="margin-top: 20px; background: #252525; padding: 12px; border-radius: 8px;">
+        <label style="display: block; font-weight: bold; margin-bottom: 6px;">
+          🎬 再生するメディア種別
+        </label>
+        <select id="media-type-filter" style="width: 100%; background: #333; color: #fff; border: 1px solid #555; padding: 8px; border-radius: 6px;" onchange="saveSettings()">
+          <option value="all">写真と動画の両方</option>
+          <option value="image">写真のみ</option>
+          <option value="video">動画のみ</option>
+        </select>
+      </div>
+
+      <div style="margin-top: 15px; background: #252525; padding: 12px; border-radius: 8px;">
+        <label style="display: block; font-weight: bold; margin-bottom: 6px;">
+          ⏱️ 写真1枚の表示時間（秒）
+        </label>
+        <input type="number" id="display-duration" value="5" min="1" max="300" style="width: 100%; background: #333; color: #fff; border: 1px solid #555; padding: 8px; border-radius: 6px;" onchange="saveSettings()">
+      </div>
+
+      <div style="margin-top: 15px; background: #252525; padding: 12px; border-radius: 8px;">
+        <label style="display: flex; align-items: center; gap: 8px; font-weight: bold; cursor: pointer; margin-bottom: 8px;">
+          <input type="checkbox" id="random-enable" onchange="saveSettings()">
+          🔀 ランダムに再生する
+        </label>
+        <div style="margin-top: 10px; padding-left: 20px;">
+          <label style="font-size: 0.85rem; color: #aaa; display: block; margin-bottom: 8px;">📅 ランダム再生時の撮影期間フィルター（複数設定可・未設定なら全対象）</label>
+          <div id="filter-date-list"></div>
+          <button class="btn btn-secondary" style="font-size: 0.85rem; padding: 8px; margin-top: 8px;" onclick="addFilterDateSlot()">
+            ＋ 撮影期間を追加
+          </button>
+        </div>
+      </div>
+
+      <div style="margin-top: 15px;">
+        <label style="display: flex; align-items: center; gap: 8px; font-weight: bold; cursor: pointer;">
+          <input type="checkbox" id="schedule-enable" onchange="toggleScheduleUI(); saveSettings();">
+          ⏰ 曜日別・動作時間帯を指定する（自動消灯）
+        </label>
+        
+        <div id="schedule-controls" style="display: none; margin-top: 12px;">
+          <div class="day-tabs">
+            <button type="button" class="day-tab active" onclick="switchDayTab(0)">日</button>
+            <button type="button" class="day-tab" onclick="switchDayTab(1)">月</button>
+            <button type="button" class="day-tab" onclick="switchDayTab(2)">火</button>
+            <button type="button" class="day-tab" onclick="switchDayTab(3)">水</button>
+            <button type="button" class="day-tab" onclick="switchDayTab(4)">木</button>
+            <button type="button" class="day-tab" onclick="switchDayTab(5)">金</button>
+            <button type="button" class="day-tab" onclick="switchDayTab(6)">土</button>
+          </div>
+          <div id="schedule-list"></div>
+          <button class="btn btn-secondary" style="font-size: 0.85rem; padding: 8px; margin-top: 8px;" onclick="addScheduleSlot()">
+            ＋ この曜日に時間帯を追加
+          </button>
+        </div>
+      </div>
+
+      <button class="btn btn-preview" style="margin-top: 24px; font-size: 1.1rem;" onclick="startSlideshow()">
+        ▶ スライドショーを開始
+      </button>
+
+      <button class="btn btn-secondary" style="margin-top: 10px;" onclick="loadSamplePhotos()">
+        🧪 テスト用: サンプル写真5枚を追加して試す
+      </button>
+    </div>
+  </div>
+
+  <div id="modal-screen">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>📷 登録ファイルの管理 (<span id="manager-count">0</span>件)</h3>
+        <button class="btn btn-danger" style="width: auto; padding: 6px 14px; margin: 0;" onclick="closePhotoManager()">閉じる</button>
+      </div>
+
+      <div class="modal-toolbar">
+        <div class="view-btn-group">
+          <button id="view-btn-grid" class="view-btn active" onclick="switchManagerView('grid')">🖼️ サムネイル</button>
+          <button id="view-btn-list" class="view-btn" onclick="switchManagerView('list')">📄 リスト</button>
+        </div>
+        <div style="margin-left: auto; display: flex; gap: 6px; align-items: center;">
+          <label>並べ替え:</label>
+          <select id="sort-key" onchange="changeSortConfig()">
+            <option value="timestamp">撮影日順</option>
+            <option value="name">ファイル名順</option>
+            <option value="id">アップロード順</option>
+          </select>
+          <select id="sort-order" onchange="changeSortConfig()">
+            <option value="asc">昇順 ⬆️</option>
+            <option value="desc">降順 ⬇️</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="modal-body grid-view" id="thumbnail-container"></div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" style="width: auto; padding: 6px 14px; margin: 0;" onclick="changeManagerPage(-1)">◀ 前へ</button>
+        <span id="page-indicator" style="font-size: 0.9rem; color: #ccc;">1 / 1</span>
+        <button class="btn btn-secondary" style="width: auto; padding: 6px 14px; margin: 0;" onclick="changeManagerPage(1)">次へ ▶</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="slideshow-screen" onclick="handleSlideshowScreenClick(event)">
+    <div id="photo-container" style="position: relative; width: 100%; height: 100%;"></div>
+    <div id="date-overlay">----/--/-- --:--</div>
+    
+    <div id="controls">
+      <button class="ctrl-btn" onclick="toggleFullscreen()">全画面切替</button>
+      <button class="ctrl-btn" onclick="stopSlideshow()">設定画面へ</button>
+    </div>
+  </div>
+
+  <div id="blackout-screen" onclick="stopSlideshow()"></div>
+
+  <script>
+    // PWA用 Service Worker の自動生成と登録処理
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        const swCode = `
+          self.addEventListener('install', (e) => self.skipWaiting());
+          self.addEventListener('activate', (e) => self.clients.claim());
+          self.addEventListener('fetch', (e) => {
+            e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
+          });
+        `;
+        const blob = new Blob([swCode], { type: 'text/javascript' });
+        const swUrl = URL.createObjectURL(blob);
+        navigator.serviceWorker.register(swUrl).catch(err => console.log('SW Reg failed:', err));
+      });
+    }
+
+    let photoMetaList = []; 
+    let currentIndex = 0;
+    let timer = null;
+    let currentDayTab = 0;
+    let schedulesByDay = {
+      0: [{ start: "08:00", end: "22:00" }],
+      1: [{ start: "08:00", end: "22:00" }],
+      2: [{ start: "08:00", end: "22:00" }],
+      3: [{ start: "08:00", end: "22:00" }],
+      4: [{ start: "08:00", end: "22:00" }],
+      5: [{ start: "08:00", end: "22:00" }],
+      6: [{ start: "08:00", end: "22:00" }]
+    };
+    let filterDateRanges = [];
+    let db = null;
+    let managerPage = 1;
+    const ITEMS_PER_PAGE = 40;
+    let currentObjectUrl = null;
+
+    // 管理画面の状態管理用
+    let managerViewMode = 'grid'; // 'grid' | 'list'
+    let managerSortKey = 'timestamp'; // 'timestamp' | 'name' | 'id'
+    let managerSortOrder = 'asc'; // 'asc' | 'desc'
+
+    const request = indexedDB.open("PhotoFrameDB", 12);
+    request.onupgradeneeded = (e) => {
+      db = e.target.result;
+      if (!db.objectStoreNames.contains("photos")) {
+        db.createObjectStore("photos", { keyPath: "id", autoIncrement: true });
+      }
+    };
+    request.onsuccess = (e) => {
+      db = e.target.result;
+      loadPhotosMetadataFromDB();
+      loadSettings();
+    };
+
+    function compressImage(file) {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            let width = img.width;
+            let height = img.height;
+            const MAX_DIM = 1920;
+
+            if (width > height && width > MAX_DIM) {
+              height = Math.round((height * MAX_DIM) / width);
+              width = MAX_DIM;
+            } else if (height > MAX_DIM) {
+              width = Math.round((width * MAX_DIM) / height);
+              height = MAX_DIM;
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+
+            canvas.toBlob((blob) => {
+              resolve(blob || file);
+            }, 'image/jpeg', 0.85);
+          };
+          img.onerror = () => resolve(file);
+          img.src = e.target.result;
+        };
+        reader.onerror = () => resolve(file);
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function saveBlobToDB(blob, name, size, timestamp, isVideo, callback) {
+      if (!db) return;
+      const tx = db.transaction("photos", "readwrite");
+      const store = tx.objectStore("photos");
+      const req = store.add({ blob, name, size, timestamp: timestamp || Date.now(), isVideo: !!isVideo });
+      req.onsuccess = (e) => {
+        if (callback) callback(e.target.result);
+      };
+    }
+
+    function deletePhotoFromDB(id, callback) {
+      if (!db) return;
+      const tx = db.transaction("photos", "readwrite");
+      const store = tx.objectStore("photos");
+      const req = store.delete(id);
+      req.onsuccess = () => {
+        if (callback) callback();
+      };
+    }
+
+    function clearPhotosDB() {
+      if (!db) return;
+      if (!confirm("登録されているファイルをすべて削除しますか？")) return;
+      const tx = db.transaction("photos", "readwrite");
+      tx.objectStore("photos").clear();
+      photoMetaList = [];
+      document.getElementById('photo-count').innerText = 0;
+      document.getElementById('bg-status').innerText = "";
+      alert("ファイルをすべてリセットしました。");
+    }
+
+    function loadPhotosMetadataFromDB() {
+      if (!db) return;
+      const tx = db.transaction("photos", "readonly");
+      const store = tx.objectStore("photos");
+      const requestAll = store.openCursor();
+      photoMetaList = [];
+
+      requestAll.onsuccess = (e) => {
+        const cursor = e.target.result;
+        if (cursor) {
+          const record = cursor.value;
+          const id = cursor.key;
+          const fileTimestamp = record.timestamp || Date.now();
+          const date = new Date(fileTimestamp);
+          const dateStr = `${date.getFullYear()}/${String(date.getMonth()+1).padStart(2,'0')}/${String(date.getDate()).padStart(2,'0')} ${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')}`;
+          
+          photoMetaList.push({
+            id,
+            name: record.name,
+            size: record.size,
+            timestamp: fileTimestamp,
+            dateText: dateStr,
+            isVideo: !!record.isVideo
+          });
+          cursor.continue();
+        } else {
+          document.getElementById('photo-count').innerText = photoMetaList.length;
+        }
+      };
+    }
+
+    function getBlobFromDB(id) {
+      return new Promise((resolve) => {
+        if (!db) { resolve(null); return; }
+        const tx = db.transaction("photos", "readonly");
+        const store = tx.objectStore("photos");
+        const req = store.get(id);
+        req.onsuccess = (e) => {
+          const record = e.target.result;
+          resolve(record ? record.blob : null);
+        };
+        req.onerror = () => resolve(null);
+      });
+    }
+
+    function saveSettings() {
+      const scheduleEnabled = document.getElementById('schedule-enable').checked;
+      const randomEnabled = document.getElementById('random-enable').checked;
+      const displayDuration = document.getElementById('display-duration').value;
+      const mediaType = document.getElementById('media-type-filter').value;
+
+      localStorage.setItem('schedule_enabled', scheduleEnabled);
+      localStorage.setItem('random_enabled', randomEnabled);
+      localStorage.setItem('display_duration', displayDuration);
+      localStorage.setItem('media_type_filter', mediaType);
+      localStorage.setItem('filter_date_ranges', JSON.stringify(filterDateRanges));
+      localStorage.setItem('schedules_by_day', JSON.stringify(schedulesByDay));
+    }
+
+    function loadSettings() {
+      const scheduleEnabled = localStorage.getItem('schedule_enabled') === 'true';
+      const randomEnabled = localStorage.getItem('random_enabled') === 'true';
+      const displayDuration = localStorage.getItem('display_duration') || '5';
+      const mediaType = localStorage.getItem('media_type_filter') || 'all';
+
+      document.getElementById('schedule-enable').checked = scheduleEnabled;
+      document.getElementById('random-enable').checked = randomEnabled;
+      document.getElementById('display-duration').value = displayDuration;
+      document.getElementById('media-type-filter').value = mediaType;
+      
+      const savedRanges = localStorage.getItem('filter_date_ranges');
+      if (savedRanges) {
+        try { filterDateRanges = JSON.parse(savedRanges); } catch(e) { filterDateRanges = []; }
+      }
+      renderFilterDateList();
+
+      const savedSchedules = localStorage.getItem('schedules_by_day');
+      if (savedSchedules) {
+        try { schedulesByDay = JSON.parse(savedSchedules); } catch(e){}
+      }
+      toggleScheduleUI();
+    }
+
+    function renderFilterDateList() {
+      const container = document.getElementById('filter-date-list');
+      container.innerHTML = '';
+
+      if (filterDateRanges.length === 0) {
+        container.innerHTML = '<div style="font-size: 0.85rem; color: #888; padding: 4px 0;">期間指定なし（すべてのファイルが対象）</div>';
+        return;
+      }
+
+      filterDateRanges.forEach((range, idx) => {
+        const div = document.createElement('div');
+        div.className = 'filter-item';
+        div.innerHTML = `
+          <input type="date" value="${range.start || ''}" onchange="filterDateRanges[${idx}].start = this.value; saveSettings();">
+          <span style="font-size: 0.85rem; color: #aaa;">〜</span>
+          <input type="date" value="${range.end || ''}" onchange="filterDateRanges[${idx}].end = this.value; saveSettings();">
+          <button class="btn btn-danger" style="padding: 6px 10px; width: auto; font-size: 0.8rem;" onclick="removeFilterDateSlot(${idx})">削除</button>
+        `;
+        container.appendChild(div);
+      });
+      saveSettings();
+    }
+
+    function addFilterDateSlot() {
+      filterDateRanges.push({ start: "", end: "" });
+      renderFilterDateList();
+    }
+
+    function removeFilterDateSlot(idx) {
+      filterDateRanges.splice(idx, 1);
+      renderFilterDateList();
+    }
+
+    function switchDayTab(dayIndex) {
+      currentDayTab = dayIndex;
+      document.querySelectorAll('.day-tab').forEach((btn, idx) => {
+        if (idx === dayIndex) btn.classList.add('active');
+        else btn.classList.remove('active');
+      });
+      renderSchedules();
+    }
+
+    function renderSchedules() {
+      const container = document.getElementById('schedule-list');
+      container.innerHTML = '';
+      const currentSchedules = schedulesByDay[currentDayTab] || [];
+
+      currentSchedules.forEach((s, idx) => {
+        const div = document.createElement('div');
+        div.className = 'schedule-item';
+        div.innerHTML = `
+          <span>時間帯 ${idx + 1}:</span>
+          <input type="time" value="${s.start}" onchange="schedulesByDay[${currentDayTab}][${idx}].start = this.value; saveSettings();">
+          <span>〜</span>
+          <input type="time" value="${s.end}" onchange="schedulesByDay[${currentDayTab}][${idx}].end = this.value; saveSettings();">
+          ${currentSchedules.length > 1 ? `<button class="btn btn-danger" style="padding:6px 12px; width:auto;" onclick="removeScheduleSlot(${idx})">削除</button>` : ''}
+        `;
+        container.appendChild(div);
+      });
+      saveSettings();
+    }
+
+    function addScheduleSlot() { 
+      if (!schedulesByDay[currentDayTab]) schedulesByDay[currentDayTab] = [];
+      schedulesByDay[currentDayTab].push({ start: "12:00", end: "18:00" }); 
+      renderSchedules(); 
+    }
+
+    function removeScheduleSlot(idx) { 
+      schedulesByDay[currentDayTab].splice(idx, 1); 
+      renderSchedules(); 
+    }
+
+    function toggleScheduleUI() {
+      const enabled = document.getElementById('schedule-enable').checked;
+      document.getElementById('schedule-controls').style.display = enabled ? 'block' : 'none';
+      if (enabled) renderSchedules();
+    }
+
+    function handleFolderSelect(e) {
+      const files = Array.from(e.target.files);
+      if (files.length === 0) return;
+      runBackgroundProcessing(files);
+      e.target.value = '';
+    }
+
+    function handleFileSelect(e) {
+      const files = Array.from(e.target.files);
+      if (files.length === 0) return;
+      runBackgroundProcessing(files);
+      e.target.value = '';
+    }
+
+    async function runBackgroundProcessing(files) {
+      const statusEl = document.getElementById('bg-status');
+      let successCount = 0;
+      let skippedCount = 0;
+      let totalFiles = files.length;
+      let processed = 0;
+
+      for (const file of files) {
+        processed++;
+        const isImage = file.type.startsWith('image/') || /\.(jpe?g|png|webp|gif)$/i.test(file.name);
+        const isVideo = file.type.startsWith('video/') || /\.(mp4|webm|ogg|mov)$/i.test(file.name);
+        const isNotMac = !file.webkitRelativePath || !file.webkitRelativePath.includes('__MACOSX');
+
+        if ((isImage || isVideo) && isNotMac) {
+          const isDuplicate = photoMetaList.some(p => p.name === file.name && p.size === file.size);
+          if (isDuplicate) {
+            skippedCount++;
+            continue;
+          }
+
+          statusEl.innerText = `バックグラウンド読込中: ${processed} / ${totalFiles} 件目...`;
+          const fileTimestamp = file.lastModified || Date.now();
+          try {
+            let blobToSave = file;
+            if (isImage) {
+              blobToSave = await compressImage(file);
+            }
+
+            if (photoMetaList.some(p => p.name === file.name && p.size === blobToSave.size)) {
+              skippedCount++;
+              continue;
+            }
+
+            await new Promise((resolve) => {
+              saveBlobToDB(blobToSave, file.name, blobToSave.size, fileTimestamp, isVideo, (newId) => {
+                const date = new Date(fileTimestamp);
+                const dateStr = `${date.getFullYear()}/${String(date.getMonth()+1).padStart(2,'0')}/${String(date.getDate()).padStart(2,'0')} ${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')}`;
+                photoMetaList.push({ id: newId, name: file.name, size: blobToSave.size, timestamp: fileTimestamp, dateText: dateStr, isVideo });
+                document.getElementById('photo-count').innerText = photoMetaList.length;
+                resolve();
+              });
+            });
+            successCount++;
+          } catch (err) {
+            console.error("File process error:", err);
+          }
+        }
+        if (processed % 3 === 0) {
+          await new Promise(r => setTimeout(r, 4));
+        }
+      }
+
+      let msg = `✅ 追加完了！ (${successCount}件追加)`;
+      if (skippedCount > 0) {
+        msg += ` ※重複した${skippedCount}件を除外しました`;
+      }
+      statusEl.innerText = msg;
+      setTimeout(() => {
+        if (statusEl.innerText.includes('追加完了')) statusEl.innerText = '';
+      }, 5000);
+    }
+
+    function loadSamplePhotos() {
+      ['#3498db', '#e74c3c', '#2ecc71', '#f1c40f', '#9b59b6'].forEach((color, i) => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 1280; canvas.height = 800;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = color; ctx.fillRect(0, 0, 1280, 800);
+        ctx.fillStyle = '#fff'; ctx.font = 'bold 60px sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText(`Sample Photo ${i + 1}`, 640, 400);
+        canvas.toBlob(blob => {
+          const name = `sample_${i}.jpg`;
+          if (!photoMetaList.some(p => p.name === name)) {
+            const sampleTimestamp = Date.now();
+            saveBlobToDB(blob, name, blob.size, sampleTimestamp, false, (newId) => {
+              const date = new Date(sampleTimestamp);
+              const dateStr = `${date.getFullYear()}/${String(date.getMonth()+1).padStart(2,'0')}/${String(date.getDate()).padStart(2,'0')} ${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')}`;
+              photoMetaList.push({ id: newId, name, size: blob.size, timestamp: sampleTimestamp, dateText: dateStr, isVideo: false });
+              document.getElementById('photo-count').innerText = photoMetaList.length;
+            });
+          }
+        }, 'image/jpeg');
+      });
+      alert('サンプル写真を追加しました！');
+    }
+
+    function openPhotoManager() {
+      managerPage = 1;
+      renderPhotoManager();
+      document.getElementById('modal-screen').style.display = 'flex';
+    }
+
+    function switchManagerView(mode) {
+      managerViewMode = mode;
+      document.getElementById('view-btn-grid').classList.toggle('active', mode === 'grid');
+      document.getElementById('view-btn-list').classList.toggle('active', mode === 'list');
+      
+      const container = document.getElementById('thumbnail-container');
+      container.className = `modal-body ${mode}-view`;
+      
+      renderPhotoManager();
+    }
+
+    function changeSortConfig() {
+      managerSortKey = document.getElementById('sort-key').value;
+      managerSortOrder = document.getElementById('sort-order').value;
+      managerPage = 1;
+      renderPhotoManager();
+    }
+
+    function getSortedPhotoList() {
+      const list = [...photoMetaList];
+      list.sort((a, b) => {
+        let valA = a[managerSortKey];
+        let valB = b[managerSortKey];
+
+        if (typeof valA === 'string') {
+          const cmp = valA.localeCompare(valB, 'ja', { numeric: true });
+          return managerSortOrder === 'asc' ? cmp : -cmp;
+        } else {
+          return managerSortOrder === 'asc' ? valA - valB : valB - valA;
+        }
+      });
+      return list;
+    }
+
+    function changeManagerPage(direction) {
+      const maxPage = Math.ceil(photoMetaList.length / ITEMS_PER_PAGE) || 1;
+      managerPage += direction;
+      if (managerPage < 1) managerPage = 1;
+      if (managerPage > maxPage) managerPage = maxPage;
+      renderPhotoManager();
+    }
+
+    async function renderPhotoManager() {
+      const container = document.getElementById('thumbnail-container');
+      container.innerHTML = '';
+      document.getElementById('manager-count').innerText = photoMetaList.length;
+
+      if (photoMetaList.length === 0) {
+        container.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: #888; padding: 40px;">登録されているファイルはありません</div>';
+        document.getElementById('page-indicator').innerText = '1 / 1';
+        return;
+      }
+
+      const sortedList = getSortedPhotoList();
+
+      const maxPage = Math.ceil(sortedList.length / ITEMS_PER_PAGE);
+      if (managerPage > maxPage) managerPage = maxPage;
+
+      document.getElementById('page-indicator').innerText = `${managerPage} / ${maxPage}`;
+
+      const start = (managerPage - 1) * ITEMS_PER_PAGE;
+      const end = start + ITEMS_PER_PAGE;
+      const pageItems = sortedList.slice(start, end);
+
+      for (const meta of pageItems) {
+        const div = document.createElement('div');
+        
+        if (managerViewMode === 'grid') {
+          div.className = 'thumb-item';
+          div.id = `thumb-box-${meta.id}`;
+          div.innerHTML = `
+            <div class="thumb-name" title="${meta.name}">${meta.name}</div>
+            <button class="thumb-del" onclick="deletePhoto(${meta.id})">削除</button>
+          `;
+        } else {
+          div.className = 'list-item';
+          div.id = `thumb-box-${meta.id}`;
+          div.innerHTML = `
+            <div class="list-info">
+              <div class="list-title" title="${meta.name}">${meta.name}</div>
+              <div class="list-sub">${meta.isVideo ? '🎥 動画' : '📷 写真'} | 撮影日: ${meta.dateText}</div>
+            </div>
+            <button class="thumb-del" style="padding: 6px 12px; font-size: 0.8rem;" onclick="deletePhoto(${meta.id})">削除</button>
+          `;
+        }
+        
+        container.appendChild(div);
+
+        const blob = await getBlobFromDB(meta.id);
+        if (blob) {
+          const url = URL.createObjectURL(blob);
+          if (meta.isVideo) {
+            const video = document.createElement('video');
+            video.src = url;
+            video.muted = true;
+            video.onloadeddata = () => URL.revokeObjectURL(url);
+            div.insertBefore(video, div.firstChild);
+          } else {
+            const img = document.createElement('img');
+            img.src = url;
+            img.alt = meta.name;
+            img.loading = 'lazy';
+            img.onload = () => URL.revokeObjectURL(url);
+            div.insertBefore(img, div.firstChild);
+          }
+        }
+      }
+    }
+
+    function closePhotoManager() {
+      document.getElementById('modal-screen').style.display = 'none';
+      document.getElementById('photo-count').innerText = photoMetaList.length;
+    }
+
+    function deletePhoto(id) {
+      deletePhotoFromDB(id, () => {
+        photoMetaList = photoMetaList.filter(p => p.id !== id);
+        renderPhotoManager();
+        document.getElementById('photo-count').innerText = photoMetaList.length;
+      });
+    }
+
+    function getFilteredPlayableList() {
+      const mediaType = document.getElementById('media-type-filter').value;
+      return photoMetaList.filter(item => {
+        if (mediaType === 'image') return !item.isVideo;
+        if (mediaType === 'video') return item.isVideo;
+        return true;
+      });
+    }
+
+    function startSlideshow() {
+      const playableList = getFilteredPlayableList();
+      if (!playableList.length) return alert('条件に合う再生可能なファイルが見つかりません');
+      document.getElementById('setup-screen').style.display = 'none';
+      document.getElementById('slideshow-screen').style.display = 'block';
+      currentIndex = 0;
+      
+      if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(err => {});
+      }
+
+      const container = document.getElementById('photo-container');
+      container.innerHTML = '';
+      
+      showNextPhoto();
+    }
+
+    function resetTimer() {
+      if (timer) clearTimeout(timer);
+      let durationSec = parseInt(document.getElementById('display-duration').value, 10) || 5;
+      if (durationSec < 1) durationSec = 1;
+      timer = setTimeout(checkScheduleAndNext, durationSec * 1000);
+    }
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        if (document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen().catch(err => {});
+        }
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen().catch(err => {});
+        }
+      }
+    }
+
+    document.addEventListener('fullscreenchange', () => {
+      const controls = document.getElementById('controls');
+      if (document.fullscreenElement) {
+        controls.style.display = 'none';
+      } else {
+        controls.style.display = 'flex';
+      }
+    });
+
+    function handleSlideshowScreenClick(e) {
+      if (e.target.closest('#controls')) return;
+      if (document.fullscreenElement) {
+        if (document.exitFullscreen) {
+          document.exitFullscreen().catch(err => {});
+        }
+      }
+    }
+
+    async function showNextPhoto() {
+      const playableList = getFilteredPlayableList();
+      if (!playableList.length) return;
+      if (timer) clearTimeout(timer);
+
+      const isRandom = document.getElementById('random-enable').checked;
+      if (isRandom) {
+        let candidateIndices = [];
+        for (let i = 0; i < playableList.length; i++) {
+          let include = true;
+          const photoTime = playableList[i].timestamp;
+          
+          if (filterDateRanges && filterDateRanges.length > 0) {
+            let matchedAny = false;
+            let hasValidRange = false;
+
+            for (const range of filterDateRanges) {
+              const hasStart = !!range.start;
+              const hasEnd = !!range.end;
+              if (hasStart || hasEnd) {
+                hasValidRange = true;
+                let inThisRange = true;
+                if (hasStart) {
+                  const startTime = new Date(range.start + 'T00:00:00').getTime();
+                  if (photoTime < startTime) inThisRange = false;
+                }
+                if (hasEnd) {
+                  const endTime = new Date(range.end + 'T23:59:59').getTime();
+                  if (photoTime > endTime) inThisRange = false;
+                }
+                if (inThisRange) {
+                  matchedAny = true;
+                  break;
+                }
+              }
+            }
+
+            if (hasValidRange && !matchedAny) {
+              include = false;
+            }
+          }
+
+          if (include) {
+            candidateIndices.push(i);
+          }
+        }
+
+        if (candidateIndices.length === 0) {
+          candidateIndices = playableList.map((_, i) => i);
+        }
+
+        if (candidateIndices.length > 1) {
+          let newIndex;
+          do {
+            newIndex = candidateIndices[Math.floor(Math.random() * candidateIndices.length)];
+          } while (newIndex === currentIndex && candidateIndices.length > 1);
+          currentIndex = newIndex;
+        } else {
+          currentIndex = candidateIndices[0];
+        }
+      }
+
+      if (currentIndex >= playableList.length) {
+        currentIndex = 0;
+      }
+
+      const meta = playableList[currentIndex];
+      const blob = await getBlobFromDB(meta.id);
+      if (!blob) return;
+
+      if (currentObjectUrl) {
+        URL.revokeObjectURL(currentObjectUrl);
+      }
+      currentObjectUrl = URL.createObjectURL(blob);
+
+      const container = document.getElementById('photo-container');
+
+      const oldWrappers = container.querySelectorAll('.photo-wrapper.active');
+      oldWrappers.forEach(w => {
+        w.classList.remove('active');
+        w.classList.add('inactive');
+        setTimeout(() => w.remove(), 1600);
+      });
+
+      const wrapper = document.createElement('div');
+      wrapper.className = 'photo-wrapper';
+      
+      if (meta.isVideo) {
+        const video = document.createElement('video');
+        video.src = currentObjectUrl;
+        video.className = 'photo';
+        video.autoplay = true;
+        video.muted = true;
+        video.playsInline = true;
+        video.onended = () => {
+          checkScheduleAndNext();
+        };
+        video.onerror = () => {
+          resetTimer();
+        };
+        wrapper.appendChild(video);
+      } else {
+        const img = document.createElement('img');
+        img.src = currentObjectUrl; 
+        img.className = 'photo';
+        wrapper.appendChild(img);
+        resetTimer();
+      }
+
+      container.appendChild(wrapper);
+
+      setTimeout(() => wrapper.classList.add('active'), 50);
+
+      document.getElementById('date-overlay').innerText = meta.dateText;
+
+      if (!isRandom) {
+        currentIndex = (currentIndex + 1) % playableList.length;
+      }
+    }
+
+    function checkScheduleAndNext() {
+      const isScheduled = document.getElementById('schedule-enable').checked;
+      if (isScheduled && !isInActiveSchedule()) {
+        document.getElementById('blackout-screen').style.display = 'block';
+        resetTimer();
+      } else {
+        document.getElementById('blackout-screen').style.display = 'none';
+        showNextPhoto();
+      }
+    }
+
+    function isInActiveSchedule() {
+      const now = new Date();
+      const dayOfWeek = now.getDay();
+      const currentMin = now.getHours() * 60 + now.getMinutes();
+      const daySchedules = schedulesByDay[dayOfWeek] || [];
+
+      return daySchedules.some(s => {
+        const [sh, sm] = s.start.split(':').map(Number);
+        const [eh, em] = s.end.split(':').map(Number);
+        const startMin = sh * 60 + sm; const endMin = eh * 60 + em;
+        return startMin <= endMin ? (currentMin >= startMin && currentMin < endMin) : (currentMin >= startMin || currentMin < endMin);
+      });
+    }
+
+    function stopSlideshow() {
+      if (timer) clearTimeout(timer);
+      if (currentObjectUrl) {
+        URL.revokeObjectURL(currentObjectUrl);
+        currentObjectUrl = null;
+      }
+      
+      if (document.fullscreenElement) {
+        if (document.exitFullscreen) {
+          document.exitFullscreen().catch(err => {});
+        }
+      }
+
+      document.getElementById('slideshow-screen').style.display = 'none';
+      document.getElementById('blackout-screen').style.display = 'none';
+      document.getElementById('setup-screen').style.display = 'flex';
+    }
+  </script>
+</body>
+</html>
     #slideshow-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none; background: #000; z-index: 10; overflow: hidden; cursor: pointer; }
     .photo-wrapper { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 1.5s ease-in-out; }
     .photo-wrapper.active { opacity: 1; z-index: 2; }
